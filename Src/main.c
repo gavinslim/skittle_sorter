@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "string.h"
+#include <stdio.h> //UART
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,18 +42,28 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
+
+TIM_HandleTypeDef htim1;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+static const uint16_t TCS_ADDR = 0x29;
+static const uint8_t CMD_CODE = 0x80;	// Command Register. b[7] = 1b to select command reg.
+static const uint8_t ID_REG = 0x12;
+static const uint8_t STATUS_REG = 0x13;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_I2C1_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 void transmit_uart(char *string);
+void int2uart(uint8_t input);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -89,17 +100,75 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_I2C1_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_StatusTypeDef ret;
+  uint8_t buffer[12];
+  uint8_t val;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  /*
+  while(HAL_I2C_IsDeviceReady(&hi2c1, TCS_ADDR, 1, HAL_MAX_DELAY)) {
+  	transmit_uart("wait\r\n");
+  	HAL_Delay(1000);
+  }
+  transmit_uart("ready\r\n");
+	*/
+
+  //__HAL_RCC_I2C1_CLK_ENABLE();
+  //__HAL_RCC_I2C1_FORCE_RESET();
+  //HAL_Delay(2);
+  //__HAL_RCC_I2C1_RELEASE_RESET();
+
+  /*
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+  for (uint8_t i = 0; i < 255; i++ ) {
+  	if (HAL_I2C_IsDeviceReady(&hi2c1, i, 1, 10) == HAL_OK)
+  	{
+  		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+  		break;
+  	}
+  }
+	*/
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+  	//transmit_uart("Init");
+
+  	HAL_Delay(1000);
+  	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+  	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_SET);
+  	HAL_Delay(1000);
+  	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+  	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_RESET);
+
+  	// Specify reg address = Device ID 0x12
+  	buffer[0] = (CMD_CODE | ID_REG);
+  	//buffer[0] = 0x0;
+  	//int2uart(buffer[0]);
+  	//transmit_uart("\r\n");
+  	//HAL_Delay(500);
+
+  	//ret = HAL_I2C_Master_Transmit(&hi2c1, ((uint16_t)TCS_ADDR)<<1, buffer, 2, HAL_MAX_DELAY);
+  	ret = HAL_I2C_Master_Transmit(&hi2c1, ((uint16_t)TCS_ADDR) << 1, buffer, 1, HAL_MAX_DELAY);
+  	if (ret != HAL_OK) {
+  		transmit_uart("Error I2C transmit\r\n");
+  	} else {
+  		ret = HAL_I2C_Master_Receive(&hi2c1, ((uint16_t)TCS_ADDR) << 1, buffer, 1, HAL_MAX_DELAY);
+  		if (ret != HAL_OK) {
+  			transmit_uart("Error Reading register address\r\n");
+  		} else {
+  			val = (uint8_t)buffer[0];
+  			int2uart(val);
+  			transmit_uart("\r\n");
+  		}
+  	}
   }
   /* USER CODE END 3 */
 }
@@ -146,6 +215,86 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 400000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 83;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 0xfffe;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
 }
 
 /**
@@ -220,6 +369,14 @@ void transmit_uart(char *string){
 	HAL_UART_Transmit(&huart2, (uint8_t*) string, len, 200);
 }
 
+
+void int2uart(uint8_t input){
+	char text[20];
+	sprintf(text, "%d", input);
+	char *p = text;
+	transmit_uart(p);
+	//transmit_uart("\r\n");
+}
 /* USER CODE END 4 */
 
 /**
