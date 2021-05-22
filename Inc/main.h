@@ -32,15 +32,14 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "tcs34725.h"
+#include "global_var.h"
 
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-typedef struct RetVal_s {
-	HAL_StatusTypeDef status;
-	uint8_t value;
-} RetVal;
+
 
 /* USER CODE END ET */
 

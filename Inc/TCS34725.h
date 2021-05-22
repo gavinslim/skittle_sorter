@@ -1,40 +1,40 @@
-#ifndef __TCS34_H
-#define __TCS34_H
+#ifndef _TCS34_H
+#define _TCS34_H
 
 #include "stm32f4xx_hal.h"
-#include "main.h"
+#include "global_var.h"
 
-/* TCS34725 Address */
-#define TCS_ADDR    0x29
+// TCS34725 Address
+extern const uint8_t TCS_ADDR;
 
-/* Register */
-#define CMD_CODE    0x80	// Command Register. b[7] = 1b to select command reg.
+// Register
+typedef uint8_t REG_CODE;
+const REG_CODE CMD_CODE;				// Command Register. b[7] = 1b to select command reg.
 
-#define ENABLE_REG  0x00    // Enables states and interrupts
-#define ATIME_REG   0x01    // RGBC time
-#define WTIME_REG   0x03    // Wait time
-#define AILTL_REG   0x04    // Clear interrupt low threshold low byte
-#define AILTH_REG   0x05    // Clear interrupt low threshold high byte
-#define AIHTL_REG   0x06    // Clear interrupt high threshold low byte
-#define AIHTH_REG   0x07    // Clear interrupt high threshold high byte
-#define PERS_REG    0x0C    // Interrupt persistence filter
-#define CONFIG_REG  0x0D    // Configuration
-#define CONTROL_REG 0x0F    // Control     
-#define ID_REG      0x12    // Device ID
-#define STATUS_REG  0x13    // Device status
-#define CDATAL_REG  0x14    // Clear data low byte
-#define CDATAH_REG  0x15    // Clear data high byte
-#define RDATAL_REG  0x16    // Red data low byte
-#define RDATAH_REG  0x17    // Red data high byte
-#define GDATAL_REG  0x18    // Green data low byte
-#define GDATAH_REG  0x19    // Green data high byte
-#define BDATAL_REG  0x1A    // Blue data low byte
-#define BDATAH_REG  0x1B    // Blue data high byte
+const REG_CODE ENABLE_REG;    	// Enables states and interrupts
+const REG_CODE ATIME_REG;    	// RGBC time
+const REG_CODE WTIME_REG;    	// Wait time
+const REG_CODE AILTL_REG;    	// Clear interrupt low threshold low byte
+const REG_CODE AILTH_REG;    	// Clear interrupt low threshold high byte
+const REG_CODE AIHTL_REG;    	// Clear interrupt high threshold low byte
+const REG_CODE AIHTH_REG;    	// Clear interrupt high threshold high byte
+const REG_CODE PERS_REG;    		// Interrupt persistence filter
+const REG_CODE CONFIG_REG;    	// Configuration
+const REG_CODE CONTROL_REG;    // Control
+const REG_CODE ID_REG;    			// Device ID
+const REG_CODE STATUS_REG;    	// Device status
+const REG_CODE CDATAL_REG;    	// Clear data low byte
+const REG_CODE CDATAH_REG;    	// Clear data high byte
+const REG_CODE RDATAL_REG;    	// Red data low byte
+const REG_CODE RDATAH_REG;    	// Red data high byte
+const REG_CODE GDATAL_REG;    	// Green data low byte
+const REG_CODE GDATAH_REG;    	// Green data high byte
+const REG_CODE BDATAL_REG;    	// Blue data low byte
+const REG_CODE BDATAH_REG;    	// Blue data high byte
 
 
+// Functions
+RetVal readDataReg(I2C_HandleTypeDef handle, REG_CODE cmd, REG_CODE reg);
+RetVal checkStatus(I2C_HandleTypeDef handle);
 
-
-/* Functions */
-RetVal foo(I2C_HandleTypeDef handle);
-
-#endif /* __TCS34_H */
+#endif /* TCS34_H */

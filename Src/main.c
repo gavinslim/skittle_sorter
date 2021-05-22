@@ -23,11 +23,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "string.h"
 #include <stdio.h> //UART
 #include <stdint.h>
+#include "string.h"
 
-#include "TCS34725.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,12 +51,9 @@ TIM_HandleTypeDef htim1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-/*
-static const uint16_t TCS_ADDR = 0x29;
-static const uint8_t CMD_CODE = 0x80;	// Command Register. b[7] = 1b to select command reg.
-static const uint8_t ID_REG = 0x12;
-static const uint8_t STATUS_REG = 0x13;
-*/
+
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -113,7 +109,7 @@ int main(void)
   uint8_t buffer[12];
 
   */
-  RetVal val;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -126,29 +122,12 @@ int main(void)
   transmit_uart("ready\r\n");
 	*/
 
-  //__HAL_RCC_I2C1_CLK_ENABLE();
-  //__HAL_RCC_I2C1_FORCE_RESET();
-  //HAL_Delay(2);
-  //__HAL_RCC_I2C1_RELEASE_RESET();
-
-  /*
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-  for (uint8_t i = 0; i < 255; i++ ) {
-  	if (HAL_I2C_IsDeviceReady(&hi2c1, i, 1, 10) == HAL_OK)
-  	{
-  		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-  		break;
-  	}
-  }
-	*/
-
+  RetVal ret;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  	//transmit_uart("Init");
-
   	HAL_Delay(1000);
   	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
   	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_SET);
@@ -157,33 +136,13 @@ int main(void)
   	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_RESET);
 
   	// Check status
-  	val = foo(hi2c1);
-  	if (val.status != HAL_OK) {
+  	ret = checkStatus(hi2c1);
+  	if (ret.status != HAL_OK) {
   		transmit_uart("Error \r\n");
   	} else {
-			int2uart(val.value);
+			int2uart(ret.value);
   		transmit_uart("\r\n");
   	}
-
-  	/*
-  	// Specify reg address = Device ID 0x12
-  	buffer[0] = (CMD_CODE | ID_REG);
-
-  	//ret = HAL_I2C_Master_Transmit(&hi2c1, ((uint16_t)TCS_ADDR)<<1, buffer, 2, HAL_MAX_DELAY);
-  	ret = HAL_I2C_Master_Transmit(&hi2c1, ((uint16_t)TCS_ADDR) << 1, buffer, 1, HAL_MAX_DELAY);
-  	if (ret != HAL_OK) {
-  		transmit_uart("Error I2C transmit\r\n");
-  	} else {
-  		ret = HAL_I2C_Master_Receive(&hi2c1, ((uint16_t)TCS_ADDR) << 1, buffer, 1, HAL_MAX_DELAY);
-  		if (ret != HAL_OK) {
-  			transmit_uart("Error Reading register address\r\n");
-  		} else {
-  			val = (uint8_t)buffer[0];
-  			int2uart(val);
-  			transmit_uart("\r\n");
-  		}
-  	}
-  	*/
   }
   /* USER CODE END 3 */
 }
