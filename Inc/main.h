@@ -37,6 +37,10 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
+typedef struct RetVal_s {
+	HAL_StatusTypeDef status;
+	uint8_t value;
+} RetVal;
 
 /* USER CODE END ET */
 
