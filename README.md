@@ -1,5 +1,5 @@
-# STM32F410RB_Testing
-Testing 
+# color_sorter
+STM32F410RB 
 
 TCS3472
 - 3x4 photodiode array and four ADC
