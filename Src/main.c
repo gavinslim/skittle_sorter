@@ -51,8 +51,8 @@ TIM_HandleTypeDef htim1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
-
+uint8_t id;
+RetVal ret;
 
 /* USER CODE END PV */
 
@@ -122,25 +122,57 @@ int main(void)
   transmit_uart("ready\r\n");
 	*/
 
-  RetVal ret;
+  // Power on sensor (Set PON bit)
+  ret = powerOnSensor(hi2c1);
+  if (ret.status != HAL_OK) {
+  	transmit_uart("ERROR: Failed to power on.\r\n");
+  	return FAIL;
+  } else {
+  	transmit_uart("PASS: Power on sensor.\r\n");
+  }
+
+  // Check ID
+	ret = checkID(hi2c1);
+	if (ret.status != HAL_OK) {
+		transmit_uart("ERROR: Failed to check ID.\r\n");
+		return FAIL;
+	} else {
+		transmit_uart("PASS: Check ID.\r\n");
+	}
+
+	// Check status
+  ret = checkStatus(hi2c1);
+  if (ret.status != HAL_OK) {
+  	transmit_uart("ERROR: Failed to check status.\r\n");
+  	return FAIL;
+  } else {
+  	transmit_uart("PASS: Check status.\r\n");
+  }
+
+
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  	HAL_Delay(1000);
+  	HAL_Delay(500);
   	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
   	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_SET);
-  	HAL_Delay(1000);
+  	HAL_Delay(500);
   	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
   	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_RESET);
 
-  	// Check status
-  	ret = checkStatus(hi2c1);
+  	ret = read_channel(hi2c1, RED);
   	if (ret.status != HAL_OK) {
-  		transmit_uart("Error \r\n");
+  		transmit_uart("ERROR: Failed to read channel RED.\r\n");
+  		return FAIL;
   	} else {
-			int2uart(ret.value);
+
+  		transmit_uart("data: ");
+  		int2uart(ret.data[0]);
+  		transmit_uart(" ");
+  		int2uart(ret.data[1]);
   		transmit_uart("\r\n");
   	}
   }
