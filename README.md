@@ -24,3 +24,7 @@ State Machine (Reference: AMS TCS3472 Datasheet)
    - Note: PON = Enable Register (0x00), WEN = Power management, AEN = RGBC Enable
 4. In WAIT state, transition to RGBC state
 5. In RGBC state, transition to IDLE state
+
+RGBC Operation:
+- RGBC integration time (ATIME) affects resolution and sensitivity of RGBC reading. Range from 2.4ms to 614ms
+- RGBC gain control (AGAIN) affects the magnitude of the reading. Options: 1x, 4x, 16x, 50x
