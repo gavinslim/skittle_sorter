@@ -38,118 +38,233 @@ const REG_CODE BDATAL_REG 	= 0x1A;    	// Blue data low byte
 const REG_CODE BDATAH_REG 	= 0x1B;    	// Blue data high byte
 
 
+ByteStruct rd_I2C_byte(I2C_HandleTypeDef handle) {
+	ByteStruct ret;
+	BYTE buffer[1];
 
-RetVal read_reg(I2C_HandleTypeDef handle, REG_CODE cmd, REG_CODE reg, uint16_t num_bytes) {
-	RetVal ret;
-	ret.status = HAL_ERROR;
-	ret.val = 0;
-
-	// Ensure num_bytes is non-zero
-	if ((num_bytes < 1) | (num_bytes > MAX_RD_BYTES)) {
-		return ret;
-	}
-
-	uint8_t buffer[num_bytes];
-	buffer[0] = (cmd | reg);
-
-	// Send I2C Write
-	ret.status = HAL_I2C_Master_Transmit(&handle, (uint16_t)TCS_ADDR_WR, buffer, 1, HAL_MAX_DELAY);
-	if (ret.status != HAL_OK) {
-		return ret;
-	} else {
-
-		// Send I2C Read
-		ret.status = HAL_I2C_Master_Receive(&handle, ((uint16_t)TCS_ADDR) << 1, buffer, num_bytes, HAL_MAX_DELAY);
-		if (ret.status != HAL_OK) {
-			return ret;
-		} else {
-			for (uint8_t i = 0; i < num_bytes; i++){
-				ret.data[i] = buffer[i];
-			}
-		}
-	}
+	ret.status = HAL_I2C_Master_Receive(&handle, (WORD)TCS_ADDR_RD, buffer, 1, HAL_MAX_DELAY);
+	ret.val = buffer[0];
 	return ret;
 }
 
-// Note: array passed as function argument or allocated in heap can not be determined in size using 'sizeof'
-RetVal write_reg(I2C_HandleTypeDef handle, REG_CODE cmd, REG_CODE reg, uint16_t num_bytes, uint8_t* data) {
-	RetVal ret;
-	ret.val = 0;
-	ret.status = HAL_ERROR;
+WordStruct rd_I2C_word(I2C_HandleTypeDef handle) {
+	WordStruct ret;
+	BYTE buffer[2];
 
-	// Combine write data with command code into buffer array
-	uint8_t buffer[num_bytes + 1];
-	buffer[0] = (cmd | reg);
-	for (uint8_t i = 0; i < num_bytes; i++) {
-		buffer[i + 1] = data[i];
-	}
-
-	// Send I2C Write
-	ret.status = HAL_I2C_Master_Transmit(&handle, (uint16_t)TCS_ADDR_WR, buffer, (num_bytes + 1), HAL_MAX_DELAY);
-
+	ret.status = HAL_I2C_Master_Receive(&handle, (WORD)TCS_ADDR_RD, buffer, 2, HAL_MAX_DELAY);
+	ret.val = (buffer[0] | (buffer[1] << 8));
 	return ret;
 }
 
-RetVal checkID(I2C_HandleTypeDef handle) {
-	return read_reg(handle, CMD_CODE, ID_REG, 1);
+HAL_StatusTypeDef wr_I2C_byte(I2C_HandleTypeDef handle, BYTE reg_addr) {
+	BYTE buffer[1];
+	buffer[0] = (CMD_CODE | reg_addr);
+	return (HAL_I2C_Master_Transmit(&handle, (WORD)TCS_ADDR_WR, buffer, 1, HAL_MAX_DELAY));
 }
 
-RetVal checkStatus(I2C_HandleTypeDef handle) {
-	return read_reg(handle, CMD_CODE, STATUS_REG, 1);
+HAL_StatusTypeDef wr_I2C_word(I2C_HandleTypeDef handle, BYTE reg_addr, BYTE wr_data) {
+	BYTE buffer[2];
+	buffer[0] = (CMD_CODE | reg_addr);
+	buffer[1] = wr_data;
+
+	return (HAL_I2C_Master_Transmit(&handle, (WORD)TCS_ADDR_WR, buffer, 2, HAL_MAX_DELAY));
 }
 
-RetVal powerOnSensor(I2C_HandleTypeDef handle) {
-	RetVal ret;
-	uint8_t data[2];
+ByteStruct read_reg_byte(I2C_HandleTypeDef handle, BYTE reg_addr) {
+	wr_I2C_byte(handle, reg_addr);
+	return rd_I2C_byte(handle);
+}
+
+WordStruct read_reg_word(I2C_HandleTypeDef handle, BYTE reg_addr) {
+	wr_I2C_byte(handle, reg_addr);
+	return rd_I2C_word(handle);
+}
+
+HAL_StatusTypeDef write_reg_byte(I2C_HandleTypeDef handle, BYTE reg_addr) {
+	return wr_I2C_byte(handle, reg_addr);
+}
+
+HAL_StatusTypeDef write_reg_word(I2C_HandleTypeDef handle, BYTE reg_addr, BYTE wr_data) {
+	return wr_I2C_word(handle, reg_addr, wr_data);
+}
+
+HAL_StatusTypeDef power_on(I2C_HandleTypeDef handle) {
+	ByteStruct ret;
 
 	// Read ENABLE register
-	ret = read_reg(handle, CMD_CODE, ENABLE_REG, 1);
+	ret = read_reg_byte(handle, ENABLE_REG);
 	if (ret.status != HAL_OK) {
-		return ret;
+		return ret.status;
 	}
 
 	// Set PON bit, AEN bit and clear WEN bit. Write ENABLE register
-	data[0] = (ret.val | 0x3) & (~(1 << 3));
-	ret = write_reg(handle, CMD_CODE, ENABLE_REG, 1, data);
-
-	return ret;
-}
-
-RetVal powerOffSensor(I2C_HandleTypeDef handle) {
-	RetVal ret;
-	uint8_t data[2];
-
-	// Read ENABLE register
-	ret = read_reg(handle, CMD_CODE, ENABLE_REG, 1);
+	//ret.val = (ret.val | 0x3) & (~(1 << 3));
+	ret.val = (ret.val | 0x1);
+	ret.status = write_reg_word(handle, ENABLE_REG, ret.val);
 	if (ret.status != HAL_OK) {
-		return ret;
+		return ret.status;
 	}
 
-	// Clear PON bit. Write ENABLE register
-	data[0] = (ret.val & ~(0x1));
-	ret = write_reg(handle, CMD_CODE, ENABLE_REG, 1, data);
-
-	return ret;
+	return ret.status;
 }
 
-// Read RGBC Channel Data Register
-RetVal read_channel(I2C_HandleTypeDef handle, EColour colour) {
-	RetVal ret;
-	ret.status = HAL_OK;
+HAL_StatusTypeDef power_off(I2C_HandleTypeDef handle) {
+	ByteStruct ret;
+
+	// Read ENABLE register
+	ret = read_reg_byte(handle, ENABLE_REG);
+	if (ret.status != HAL_OK) {
+		return ret.status;
+	}
+
+	// Clear PON bit
+	ret.val = (ret.val & ~(0x1));
+
+	ret.status = write_reg_word(handle, ENABLE_REG, ret.val);
+	if (ret.status != HAL_OK) {
+		return ret.status;
+	}
+
+	return ret.status;
+}
+
+// Clear WEN bit and set AEN bit to enable RGBC mode
+HAL_StatusTypeDef start(I2C_HandleTypeDef handle) {
+	ByteStruct ret;
+
+	ret = read_reg_byte(handle, ENABLE_REG);
+	if (ret.status != HAL_OK) {
+		return ret.status;
+	}
+
+	// Clear WEN bit and set AEN bit
+	ret.val &= ~(0x1 << 3);
+	ret.val |= (0x1 << 1);
+
+	ret.status = write_reg_word(handle, ENABLE_REG, ret.val);
+	if (ret.status != HAL_OK) {
+		return ret.status;
+	}
+
+	return ret.status;
+}
+
+ByteStruct check_id(I2C_HandleTypeDef handle) {
+	return read_reg_byte(handle, ID_REG);
+}
+
+ByteStruct check_status(I2C_HandleTypeDef handle) {
+	return read_reg_byte(handle, STATUS_REG);
+}
+
+ByteStruct check_atime(I2C_HandleTypeDef handle) {
+	return read_reg_byte(handle, ATIME_REG);
+}
+
+ByteStruct check_wtime(I2C_HandleTypeDef handle) {
+	return read_reg_byte(handle, WTIME_REG);
+}
+
+void set_atime(I2C_HandleTypeDef handle, EIntegrationTime time) {
+	write_reg_word(handle, ATIME_REG, time);
+	return;
+}
+
+BYTE check_gain(I2C_HandleTypeDef handle) {
+	ByteStruct ret = read_reg_byte(handle, CONTROL_REG);
+	return (ret.val | 0x3);
+}
+
+WORD read_channel(I2C_HandleTypeDef handle, EColour colour) {
+	WordStruct ret;
 
 	switch (colour) {
 	case RED:
-		ret = read_reg(handle, CMD_AUTO_INCR, RDATAL_REG, 2);
+		ret = read_reg_word(handle, RDATAL_REG);
 		break;
 	case GREEN:
+		ret = read_reg_word(handle, GDATAL_REG);
 		break;
 	case BLUE:
+		ret = read_reg_word(handle, BDATAL_REG);
 		break;
 	case CLEAR:
+		ret = read_reg_word(handle, CDATAL_REG);
 		break;
 	default:
 		ret.status = HAL_ERROR;
 	}
 
-	return ret;
+	return ret.val;
+}
+
+RGBC read_RGBC(I2C_HandleTypeDef handle, EIntegrationTime atime) {
+	RGBC color;
+
+	color.R = read_channel(handle, RED);
+	color.G = read_channel(handle, GREEN);
+	color.B = read_channel(handle, BLUE);
+	color.C = read_channel(handle, CLEAR);
+
+	switch (atime) {
+	case INTEGRATION_TIME_2_4MS:
+		HAL_Delay(3);
+		break;
+	case INTEGRATION_TIME_24MS:
+		HAL_Delay(24);
+		break;
+	case INTEGRATION_TIME_101MS:
+		HAL_Delay(101);
+		break;
+	case INTEGRATION_TIME_154MS:
+		HAL_Delay(154);
+		break;
+	case INTEGRATION_TIME_614MS:
+		HAL_Delay(614);
+		break;
+	default:
+		HAL_Delay(614);
+	}
+
+	return color;
+}
+
+DWORD convert_RGB888(RGBC rgbc) {
+  float i=1;
+  //Limit data range
+  if(rgbc.R >= rgbc.G && rgbc.R >= rgbc.B){
+      i = rgbc.R / 255 + 1;
+  }
+  else if(rgbc.G >= rgbc.R && rgbc.G >= rgbc.B){
+      i = rgbc.G / 255 + 1;
+  }
+  else if(rgbc.B >=  rgbc.G && rgbc.B >= rgbc.R){
+      i = rgbc.B / 255 + 1;
+  }
+  if(i!=0)
+  {
+      rgbc.R = (rgbc.R) / i;
+      rgbc.G = (rgbc.G) / i;
+      rgbc.B = (rgbc.B) / i;
+  }
+  //Amplify data differences
+  /*Please don't try to make the data negative,
+      unless you don't change the data type*/
+  if(rgbc.R > 30)
+      rgbc.R = rgbc.R - 30;
+  if(rgbc.G > 30)
+      rgbc.G = rgbc.G - 30;
+  if(rgbc.B > 30)
+      rgbc.B = rgbc.B - 30;
+  rgbc.R = rgbc.R * 255 / 225;
+  rgbc.G = rgbc.G * 255 / 225;
+  rgbc.B = rgbc.B * 255 / 225;
+
+  if(rgbc.R>255)
+         rgbc.R = 255;
+  if(rgbc.G>255)
+         rgbc.G = 255;
+  if(rgbc.B>255)
+         rgbc.B = 255;
+  return (rgbc.R << 16) | (rgbc.G << 8) | (rgbc.B);
 }

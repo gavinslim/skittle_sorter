@@ -53,6 +53,12 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 uint8_t id;
 RetVal ret;
+WordStruct red;
+WordStruct green;
+WordStruct blue;
+RGBC raw_color;
+DWORD color;
+ByteStruct atime;
 
 /* USER CODE END PV */
 
@@ -64,7 +70,7 @@ static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 void transmit_uart(char *string);
-void int2uart(uint8_t input);
+void int2uart(uint16_t input);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -122,34 +128,61 @@ int main(void)
   transmit_uart("ready\r\n");
 	*/
 
-  // Power on sensor (Set PON bit)
-  ret = powerOnSensor(hi2c1);
-  if (ret.status != HAL_OK) {
+
+  // Power On Sensor (Set PON bit)
+  if (power_on(hi2c1) != HAL_OK) {
   	transmit_uart("ERROR: Failed to power on.\r\n");
   	return FAIL;
   } else {
-  	transmit_uart("PASS: Power on sensor.\r\n");
+  	transmit_uart("PASS: Power on sensor. \r\n");
+  }
+
+  HAL_Delay(3);
+  if (start(hi2c1) != HAL_OK) {
+  	transmit_uart("ERROR: Failed to start sensor in RGBC mode.\r\n");
+  	return FAIL;
+  } else {
+  	transmit_uart("PASS: Sensor started in RGBC mode. \r\n");
   }
 
   // Check ID
-	ret = checkID(hi2c1);
-	if (ret.status != HAL_OK) {
-		transmit_uart("ERROR: Failed to check ID.\r\n");
-		return FAIL;
-	} else {
-		transmit_uart("PASS: Check ID.\r\n");
-	}
-
-	// Check status
-  ret = checkStatus(hi2c1);
-  if (ret.status != HAL_OK) {
-  	transmit_uart("ERROR: Failed to check status.\r\n");
+  ByteStruct id = check_id(hi2c1);
+  if (id.status != HAL_OK) {
+  	transmit_uart("ERROR: Failed to check ID.\r\n");
   	return FAIL;
   } else {
-  	transmit_uart("PASS: Check status.\r\n");
+  	transmit_uart("PASS: ID = ");
+  	int2uart(id.val);
+  	transmit_uart("\r\n");
   }
 
+  // Check status
+  ByteStruct stat = check_status(hi2c1);
+  if (stat.status != HAL_OK) {
+  	transmit_uart("ERROR: Failed to check status. \r\n");
+  	return FAIL;
+  } else {
+  	transmit_uart("PASS: Status = ");
+  	int2uart(stat.val);
+  	transmit_uart("\r\n");
+  }
 
+  set_atime(hi2c1, INTEGRATION_TIME_154MS);
+
+  ByteStruct atime = check_atime(hi2c1);
+  if (atime.status != HAL_OK) {
+  	transmit_uart("ERROR: Failed to check ATIME. \r\n");
+  	return FAIL;
+  } else {
+  	transmit_uart("PASS: ATIME = ");
+  	int2uart(atime.val);
+  	transmit_uart("\r\n");
+  }
+
+  BYTE gain = check_gain(hi2c1);
+  transmit_uart("PASS: Gain = ");
+  int2uart(gain);
+  transmit_uart("\r\n");
 
   while (1)
   {
@@ -163,18 +196,29 @@ int main(void)
   	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
   	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_RESET);
 
-  	ret = read_channel(hi2c1, RED);
-  	if (ret.status != HAL_OK) {
-  		transmit_uart("ERROR: Failed to read channel RED.\r\n");
-  		return FAIL;
-  	} else {
 
-  		transmit_uart("data: ");
-  		int2uart(ret.data[0]);
-  		transmit_uart(" ");
-  		int2uart(ret.data[1]);
-  		transmit_uart("\r\n");
-  	}
+  	raw_color = read_RGBC(hi2c1, atime.val);
+  	/*
+		transmit_uart("R: ");
+		int2uart(raw_color.R);
+		transmit_uart(" | G: ");
+		int2uart(raw_color.G);
+		transmit_uart(" | B: ");
+		int2uart(raw_color.B);
+		transmit_uart("\r\n");
+		*/
+
+
+  	color = convert_RGB888(raw_color);
+
+		transmit_uart("R: ");
+		int2uart((color >> 16));
+		transmit_uart(" | G: ");
+		int2uart(((color >> 8) & 0xFF));
+		transmit_uart(" | B: ");
+		int2uart((color & 0xFF));
+		transmit_uart("\r\n");
+
   }
   /* USER CODE END 3 */
 }
@@ -376,7 +420,7 @@ void transmit_uart(char *string){
 }
 
 
-void int2uart(uint8_t input){
+void int2uart(uint16_t input){
 	char text[20];
 	sprintf(text, "%d", input);
 	char *p = text;
