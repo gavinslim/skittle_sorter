@@ -95,8 +95,9 @@ void set_atime(I2C_HandleTypeDef handle, BYTE time);
 
 WORD read_channel(I2C_HandleTypeDef handle, EColour colour);
 RGBC read_RGBC(I2C_HandleTypeDef handle, EIntegrationTime atime);
+WORD map(WORD x, WORD in_min, WORD in_max, WORD out_min, WORD out_max);
 DWORD convert_RGB888(RGBC rgbc);
-
+DWORD convert_RGB8881(RGBC rgbc);
 /*
 RetVal readClearLowByte(I2C_HandleTypeDef handle);
 RetVal readClearHighByte(I2C_HandleTypeDef handle);

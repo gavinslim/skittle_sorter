@@ -189,24 +189,27 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+  	/*
   	HAL_Delay(500);
   	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
   	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_SET);
   	HAL_Delay(500);
   	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
   	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_RESET);
-
+		*/
 
   	raw_color = read_RGBC(hi2c1, atime.val);
-  	/*
+
+  	transmit_uart("RAW:");
 		transmit_uart("R: ");
 		int2uart(raw_color.R);
 		transmit_uart(" | G: ");
 		int2uart(raw_color.G);
 		transmit_uart(" | B: ");
 		int2uart(raw_color.B);
+		transmit_uart(" | C: ");
+		int2uart(raw_color.C);
 		transmit_uart("\r\n");
-		*/
 
 
   	color = convert_RGB888(raw_color);
@@ -219,6 +222,17 @@ int main(void)
 		int2uart((color & 0xFF));
 		transmit_uart("\r\n");
 
+		color = convert_RGB8881(raw_color);
+
+		transmit_uart("R: ");
+		int2uart((color >> 16));
+		transmit_uart(" | G: ");
+		int2uart(((color >> 8) & 0xFF));
+		transmit_uart(" | B: ");
+		int2uart((color & 0xFF));
+		transmit_uart("\r\n");
+
+		transmit_uart("\r\n");
   }
   /* USER CODE END 3 */
 }

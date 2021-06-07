@@ -229,7 +229,29 @@ RGBC read_RGBC(I2C_HandleTypeDef handle, EIntegrationTime atime) {
 	return color;
 }
 
+WORD map(WORD x, WORD in_min, WORD in_max, WORD out_min, WORD out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
+// Convert raw data to RGB 888 format
 DWORD convert_RGB888(RGBC rgbc) {
+	WORD red = ((float)rgbc.R / (float)rgbc.C) * (float)255;
+	WORD green = ((float)rgbc.G / (float)rgbc.C) * (float)255;
+	WORD blue = ((float)rgbc.B / (float)rgbc.C) * (float)255;
+
+	if (red > 255) { red = 255; }
+	if (green > 255) { green = 255; }
+	if (blue > 255) { blue = 255; }
+
+	red = red / (red + green + blue);
+	blue = blue / (red + green + blue);
+	green = green / (red + green + blue);
+
+	return ((red << 16) | (green << 8) | blue);
+}
+
+
+DWORD convert_RGB8881(RGBC rgbc) {
   float i=1;
   //Limit data range
   if(rgbc.R >= rgbc.G && rgbc.R >= rgbc.B){
