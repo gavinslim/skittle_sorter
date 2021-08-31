@@ -47,19 +47,20 @@
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim5;
 
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint8_t id;
 RetVal ret;
-WordStruct red;
-WordStruct green;
-WordStruct blue;
+//WordStruct red;
+//WordStruct green;
+//WordStruct blue;
 RGBC raw_color;
 DWORD color;
 ByteStruct atime;
-
+int led_on = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -68,6 +69,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM5_Init(void);
 /* USER CODE BEGIN PFP */
 void transmit_uart(char *string);
 void int2uart(uint16_t input);
@@ -109,24 +111,13 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   MX_TIM1_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
-  /*
-  HAL_StatusTypeDef ret;
-  uint8_t buffer[12];
-
-  */
-
+  HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  /*
-  while(HAL_I2C_IsDeviceReady(&hi2c1, TCS_ADDR, 1, HAL_MAX_DELAY)) {
-  	transmit_uart("wait\r\n");
-  	HAL_Delay(1000);
-  }
-  transmit_uart("ready\r\n");
-	*/
 
 
   // Power On Sensor (Set PON bit)
@@ -184,55 +175,89 @@ int main(void)
   int2uart(gain);
   transmit_uart("\r\n");
 
+  Eflavour flavour;
+  BYTE red, blue, green;
+
+  // Initiate variables
+	int num_chks = 5;
+  int num_empty = 0;
+  int max_retries = 7;
+  int curr_degrees = 90;
+  StepperMove degrees;
+  degrees.abs_deg = 0;
+  degrees.dir = COUNTER_CLOCKWISE;
+
+  int order_delay = 100;
+  int read_delay = 25;
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  	/*
-  	HAL_Delay(500);
-  	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-  	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_SET);
-  	HAL_Delay(500);
-  	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-  	HAL_GPIO_WritePin(Timer_Pin_GPIO_Port, Timer_Pin_Pin, GPIO_PIN_RESET);
-		*/
+  	if (led_on == 1) {
 
-  	raw_color = read_RGBC(hi2c1, atime.val);
+			// Check colour
+  		color = read_sensor(hi2c1, atime, read_delay, order_delay);
+			red = color >> 16;
+			green = (color >> 8) & 0xFF;
+			blue = color & 0xFF;
 
-  	transmit_uart("RAW:");
-		transmit_uart("R: ");
-		int2uart(raw_color.R);
-		transmit_uart(" | G: ");
-		int2uart(raw_color.G);
-		transmit_uart(" | B: ");
-		int2uart(raw_color.B);
-		transmit_uart(" | C: ");
-		int2uart(raw_color.C);
-		transmit_uart("\r\n");
+			flavour = check_colour_side(color);
+			if (flavour == UNKNOWN) {
+				num_empty++;
+			} else {
+				num_empty = 0;
+			}
 
+			// Print out
+			transmit_uart("R: ");
+			int2uart(red);
+			transmit_uart(" | G: ");
+			int2uart(green);
+			transmit_uart(" | B: ");
+			int2uart(blue);
+			transmit_uart(" >>> ");
 
-  	color = convert_RGB888(raw_color);
+			switch (flavour) {
+			case UNKNOWN:
+				transmit_uart("Unknown\r\n");
+				break;
+			case LEMON:
+				transmit_uart("Lemon\r\n");
+				break;
+			case GREEN_APPLE:
+				transmit_uart("Green Apple\r\n");
+				break;
+			case STRAWBERRY:
+				transmit_uart("Strawberry\r\n");
+				break;
+			case ORANGE:
+				transmit_uart("Orange\r\n");
+				break;
+			case GRAPE:
+				transmit_uart("Grape\r\n");
+				break;
+			default:
+				transmit_uart("Default\r\n");
+				break;
+			}
 
-		transmit_uart("R: ");
-		int2uart((color >> 16));
-		transmit_uart(" | G: ");
-		int2uart(((color >> 8) & 0xFF));
-		transmit_uart(" | B: ");
-		int2uart((color & 0xFF));
-		transmit_uart("\r\n");
+			// Rotate Distributor
+			//HAL_Delay(50);
+			curr_degrees = rotate_distributor(flavour, curr_degrees, order_delay);
 
-		color = convert_RGB8881(raw_color);
+			// Rotate Orderly motor
+  		rotate_orderly(order_delay);
 
-		transmit_uart("R: ");
-		int2uart((color >> 16));
-		transmit_uart(" | G: ");
-		int2uart(((color >> 8) & 0xFF));
-		transmit_uart(" | B: ");
-		int2uart((color & 0xFF));
-		transmit_uart("\r\n");
+			// Rotate Revolver motor by 60 degrees at each interval
+  		rotate_revolver(order_delay);
 
-		transmit_uart("\r\n");
+			// If no skittles detected 6 times, then no more skittles in hopper. End process.
+			if (num_empty >= max_retries) {
+				transmit_uart("\r\n SKITTLE CHECKING COMPLETE!");
+				return 0;
+			}
+  	}
   }
   /* USER CODE END 3 */
 }
@@ -362,6 +387,65 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 83;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 19999;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
+  HAL_TIM_MspPostInit(&htim5);
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -410,7 +494,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, Timer_Pin_Pin|LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, Timer_Pin_Pin|LD2_Pin|GPIO_PIN_8|GPIO_PIN_10, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, LED_EN_Pin|GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -418,12 +505,36 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Timer_Pin_Pin LD2_Pin */
-  GPIO_InitStruct.Pin = Timer_Pin_Pin|LD2_Pin;
+  /*Configure GPIO pins : Timer_Pin_Pin LD2_Pin PA8 PA10 */
+  GPIO_InitStruct.Pin = Timer_Pin_Pin|LD2_Pin|GPIO_PIN_8|GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LED_EN_Pin */
+  GPIO_InitStruct.Pin = LED_EN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LED_EN_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB14 */
+  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB4 PB5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 
@@ -440,6 +551,22 @@ void int2uart(uint16_t input){
 	char *p = text;
 	transmit_uart(p);
 	//transmit_uart("\r\n");
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(GPIO_Pin);
+  /* NOTE: This function Should not be modified, when the callback is needed,
+           the HAL_GPIO_EXTI_Callback could be implemented in the user file
+   */
+	// Toggle color sensor LED
+  HAL_GPIO_TogglePin(LED_EN_PORT, LED_EN_PIN);
+	//transmit_uart("TOGGLED\r\n");
+	led_on = !led_on;
+
+	// Switch bounce
+	for (uint32_t i=0; i < 100000; i++);
 }
 /* USER CODE END 4 */
 

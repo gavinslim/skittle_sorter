@@ -4,7 +4,13 @@
 #include "stm32f4xx_hal.h"
 #include "global_var.h"
 
+// LED enable pin
+#define LED_EN_PORT	GPIOB
+#define LED_EN_PIN 	GPIO_PIN_13
+
 #define MAX_RD_BYTES 5
+
+#define MAX_SENSOR_READS 5
 
 // TCS34725 Address
 extern const uint8_t TCS_ADDR;
@@ -47,6 +53,14 @@ typedef struct {
 	WORD C;
 } RGBC;
 
+typedef struct {
+	float x;
+	float y;
+	float z;
+	float x_axis;
+	float y_axis;
+} coordinate;
+
 typedef enum {
 	INTEGRATION_TIME_2_4MS	= 0xFF,
 	INTEGRATION_TIME_24MS 	= 0xF6,
@@ -54,6 +68,15 @@ typedef enum {
 	INTEGRATION_TIME_154MS	= 0xC0,
 	INTEGRATION_TIME_614MS	= 0x00
 } EIntegrationTime;
+
+typedef enum {
+	LEMON,
+	ORANGE,
+	GREEN_APPLE,
+	STRAWBERRY,
+	GRAPE,
+	UNKNOWN
+} Eflavour;
 
 // Functions
 RetVal read_reg(I2C_HandleTypeDef handle, REG_CODE cmd, REG_CODE reg, uint16_t num_bytes);
@@ -97,7 +120,13 @@ WORD read_channel(I2C_HandleTypeDef handle, EColour colour);
 RGBC read_RGBC(I2C_HandleTypeDef handle, EIntegrationTime atime);
 WORD map(WORD x, WORD in_min, WORD in_max, WORD out_min, WORD out_max);
 DWORD convert_RGB888(RGBC rgbc);
+Eflavour check_colour(DWORD rgb);
+Eflavour check_colour_side(DWORD rgb_data);
 DWORD convert_RGB8881(RGBC rgbc);
+coordinate convert_RGB8882(RGBC rgbc);
+
+DWORD read_sensor(I2C_HandleTypeDef hi2c1, ByteStruct atime, int read_delay, int order_delay);
+
 /*
 RetVal readClearLowByte(I2C_HandleTypeDef handle);
 RetVal readClearHighByte(I2C_HandleTypeDef handle);

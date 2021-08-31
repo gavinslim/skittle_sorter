@@ -233,6 +233,8 @@ WORD map(WORD x, WORD in_min, WORD in_max, WORD out_min, WORD out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
+// Red: 110/71/66
+// Orange: 133/60/40
 // Convert raw data to RGB 888 format
 DWORD convert_RGB888(RGBC rgbc) {
 	WORD red = ((float)rgbc.R / (float)rgbc.C) * (float)255;
@@ -243,13 +245,90 @@ DWORD convert_RGB888(RGBC rgbc) {
 	if (green > 255) { green = 255; }
 	if (blue > 255) { blue = 255; }
 
-	red = red / (red + green + blue);
-	blue = blue / (red + green + blue);
-	green = green / (red + green + blue);
+	//red = red / (red + green + blue);
+	//blue = blue / (red + green + blue);
+	//green = green / (red + green + blue);
 
 	return ((red << 16) | (green << 8) | blue);
 }
 
+// https://shop.m5stack.com/products/color-unit
+coordinate convert_RGB8882(RGBC rgbc) {
+	float x = 2.7688*((float)(rgbc.R)) + 1.7517*((float)(rgbc.G)) + 1.1301*((float)(rgbc.B));
+	float y = 1.0000*((float)(rgbc.R)) + 4.5906*((float)(rgbc.G)) + 0.0601*((float)(rgbc.B));
+	float z = 0*((float)(rgbc.R)) + 0.0565*((float)(rgbc.G)) + 5.5942*((float)(rgbc.B));
+
+	float x_axis = (float)(x / (x + y + z));
+	float y_axis = (float)(y / (x + y + z));
+
+	coordinate output;
+	output.x = x;
+	output.y = y;
+	output.z = z;
+	output.x_axis = (x_axis * 100);
+	output.y_axis = (y_axis * 100);
+
+	return output;
+}
+
+Eflavour check_colour(DWORD rgb_data) {
+	BYTE red = rgb_data >> 16;
+	BYTE green = (rgb_data >> 8) & 0xFF;
+	BYTE blue = rgb_data & 0xFF;
+
+	if 	(((red >= 61) && (red <= 76)) &&
+			((green >= 112) && (green <= 131)) &&
+			((blue >= 38) && (blue <= 52))) {
+			return GREEN_APPLE;
+	} else if (((red >= 106) && (red <= 115)) &&
+			((green >= 90) && (green <= 97)) &&
+			((blue >= 29) && (blue <= 39))) {
+			return LEMON;
+	} else if (((red >= 135) && (red <= 156)) &&
+			((green >= 54) && (green <= 61)) &&
+			((blue >= 31) && (blue <= 43))) {
+			return ORANGE;
+	} else if (((red >= 114) && (red <= 145)) &&
+			((green >= 36) && (green <= 68)) &&
+			((blue >= 49) && (blue <= 65))) {
+			return STRAWBERRY;
+	} else if (((red >= 80) && (red <= 107)) &&
+			((green >= 76) && (green <= 87)) &&
+			((blue >= 62) && (blue <= 75))) {
+			return GRAPE;
+	}
+	return UNKNOWN;
+}
+
+// Using convert_RGB888
+Eflavour check_colour_side(DWORD rgb_data) {
+	BYTE red = rgb_data >> 16;
+	BYTE green = (rgb_data >> 8) & 0xFF;
+	BYTE blue = rgb_data & 0xFF;
+
+	if 	(((red >= 72) && (red <= 82)) &&
+			((green >= 112) && (green <= 120)) &&
+			((blue >= 39) && (blue <= 45))) {
+			return GREEN_APPLE;
+	} else if (((red >= 99) && (red <= 119)) &&
+			((green >= 89) && (green <= 95)) &&
+			((blue >= 29) && (blue <= 34))) {
+			return LEMON;
+	} else if (((red >= 131) && (red <= 159)) &&
+			((green >= 48) && (green <= 60)) &&
+			((blue >= 31) && (blue <= 37))) {
+			return ORANGE;
+	} else if (((red >= 128) && (red <= 153)) &&
+			((green >= 54) && (green <= 64)) &&
+			((blue >= 43) && (blue <= 53))) {
+			return STRAWBERRY;
+	} else if (((red >= 95) && (red <= 108)) &&
+			((green >= 76) && (green <= 87)) &&
+			((blue >= 59) && (blue <= 66))) {
+			return GRAPE;
+	}
+	return UNKNOWN;
+}
 
 DWORD convert_RGB8881(RGBC rgbc) {
   float i=1;
@@ -289,4 +368,44 @@ DWORD convert_RGB8881(RGBC rgbc) {
   if(rgbc.B>255)
          rgbc.B = 255;
   return (rgbc.R << 16) | (rgbc.G << 8) | (rgbc.B);
+}
+
+DWORD read_sensor(I2C_HandleTypeDef hi2c1, ByteStruct atime, int read_delay, int order_delay) {
+	RGBC raw_color;
+	RGBC ave_color;
+	RGBC sum_color;
+	sum_color.R = 0;
+	sum_color.G = 0;
+	sum_color.B = 0;
+	sum_color.C = 0;
+	//BYTE red, blue, green;
+	DWORD color;
+
+	// Turn LED on
+	HAL_GPIO_WritePin(LED_EN_PORT, LED_EN_PIN, GPIO_PIN_SET);
+	HAL_Delay(order_delay);
+	for (int i = 0; i < MAX_SENSOR_READS; i++) {
+		raw_color = read_RGBC(hi2c1, atime.val);
+		sum_color.R = raw_color.R + sum_color.R;
+		sum_color.G = raw_color.G + sum_color.G;
+		sum_color.B = raw_color.B + sum_color.B;
+		sum_color.C = raw_color.C + sum_color.C;
+
+		HAL_Delay(read_delay);
+	}
+
+	// Turn LED off
+	HAL_GPIO_WritePin(LED_EN_PORT, LED_EN_PIN, GPIO_PIN_RESET);
+
+	ave_color.R = (float)sum_color.R / (float)MAX_SENSOR_READS;
+	ave_color.G = (float)sum_color.G / (float)MAX_SENSOR_READS;
+	ave_color.B = (float)sum_color.B / (float)MAX_SENSOR_READS;
+	ave_color.C = (float)sum_color.C / (float)MAX_SENSOR_READS;
+
+	color = convert_RGB888(ave_color);
+	//red = color >> 16;
+	//green = (color >> 8) & 0xFF;
+	//blue = color & 0xFF;
+
+	return color;
 }
