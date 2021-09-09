@@ -1,4 +1,12 @@
-# color_sorter
+# Skittle Sorter
+
+STM32F4-based skittle sorting machine.  
+
+Components:
+- TCS3472 Colour Sensor ([Adafruit](https://www.adafruit.com/product/1334))
+- NEMA-17 stepper motor ([Amazon](https://www.amazon.ca/gp/product/B081RCK8QK/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1)) 
+- A4988 motor driver ([Amazon](https://www.amazon.ca/UEETEK-Compatible-Stepper-Driver-Printer/dp/B07B5ZQXQ9/ref=pd_rhf_ee_s_rp_c_2_6/147-1935409-9490261?pd_rd_w=mK4Wy&pf_rd_p=4a1f7675-9d78-4d55-adb2-96dfabf27919&pf_rd_r=Y8G2PRBBY7YHCVYAS36N&pd_rd_r=b6e4b725-a241-4596-a51e-aa7b62eb8220&pd_rd_wg=3JzLd&pd_rd_i=B07B5ZQXQ9&psc=1))
+- Nucleo STM32F410 ([Digikey](https://www.digikey.ca/en/products/detail/stmicroelectronics/NUCLEO-F410RB/5428806))
 
 TCS3472
 - 3x4 photodiode array and four ADC
