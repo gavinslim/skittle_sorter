@@ -28,3 +28,7 @@ State Machine (Reference: AMS TCS3472 Datasheet)
 RGBC Operation:
 - RGBC integration time (ATIME) affects resolution and sensitivity of RGBC reading. Range from 2.4ms to 614ms
 - RGBC gain control (AGAIN) affects the magnitude of the reading. Options: 1x, 4x, 16x, 50x
+
+
+Inline-style: 
+![Orderly Demo](demo/orderly.gif)
