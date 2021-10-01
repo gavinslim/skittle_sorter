@@ -7,14 +7,14 @@
 
 #include <tcs34725.h>
 
-// TCS34725 Address
+// TCS34725 Address (Specified in datasheet)
 const uint8_t TCS_ADDR = 0x29;
 const uint8_t TCS_ADDR_WR = 0x29 << 1;
 const uint8_t TCS_ADDR_RD = (0x29 << 1) | 1;
 
 // Register
-const REG_CODE CMD_CODE			= 0x80;			// Command Register. b[7] = 1b to select command reg.
-const REG_CODE CMD_AUTO_INCR = 0xA0;
+const REG_CODE CMD_CODE				= 0x80;			// Command Register. b[7] = 1b to select command reg.
+const REG_CODE CMD_AUTO_INCR 	= 0xA0;
 
 const REG_CODE ENABLE_REG 	= 0x00;    	// Enables states and interrupts
 const REG_CODE ATIME_REG  	= 0x01;    	// RGBC time
@@ -37,7 +37,7 @@ const REG_CODE GDATAH_REG 	= 0x19;    	// Green data high byte
 const REG_CODE BDATAL_REG 	= 0x1A;    	// Blue data low byte
 const REG_CODE BDATAH_REG 	= 0x1B;    	// Blue data high byte
 
-
+// Read 8-bits
 ByteStruct rd_I2C_byte(I2C_HandleTypeDef handle) {
 	ByteStruct ret;
 	BYTE buffer[1];
@@ -47,6 +47,7 @@ ByteStruct rd_I2C_byte(I2C_HandleTypeDef handle) {
 	return ret;
 }
 
+// Read 16-bits
 WordStruct rd_I2C_word(I2C_HandleTypeDef handle) {
 	WordStruct ret;
 	BYTE buffer[2];
@@ -56,12 +57,16 @@ WordStruct rd_I2C_word(I2C_HandleTypeDef handle) {
 	return ret;
 }
 
+// Write 8-bits
+// Command register is written first to specify control status data register for subsequent read/write operations
 HAL_StatusTypeDef wr_I2C_byte(I2C_HandleTypeDef handle, BYTE reg_addr) {
 	BYTE buffer[1];
 	buffer[0] = (CMD_CODE | reg_addr);
 	return (HAL_I2C_Master_Transmit(&handle, (WORD)TCS_ADDR_WR, buffer, 1, HAL_MAX_DELAY));
 }
 
+// Write 16-bits
+// First 8-bits contains config value for command reg, followed by the value for the intended write reg
 HAL_StatusTypeDef wr_I2C_word(I2C_HandleTypeDef handle, BYTE reg_addr, BYTE wr_data) {
 	BYTE buffer[2];
 	buffer[0] = (CMD_CODE | reg_addr);
@@ -70,6 +75,8 @@ HAL_StatusTypeDef wr_I2C_word(I2C_HandleTypeDef handle, BYTE reg_addr, BYTE wr_d
 	return (HAL_I2C_Master_Transmit(&handle, (WORD)TCS_ADDR_WR, buffer, 2, HAL_MAX_DELAY));
 }
 
+// Issue a read command. Register address used is based on the previous command used for data access
+// Before issueing read command, first issue a write command to specify the register address for subsequent read command.
 ByteStruct read_reg_byte(I2C_HandleTypeDef handle, BYTE reg_addr) {
 	wr_I2C_byte(handle, reg_addr);
 	return rd_I2C_byte(handle);
@@ -229,12 +236,6 @@ RGBC read_RGBC(I2C_HandleTypeDef handle, EIntegrationTime atime) {
 	return color;
 }
 
-WORD map(WORD x, WORD in_min, WORD in_max, WORD out_min, WORD out_max) {
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-// Red: 110/71/66
-// Orange: 133/60/40
 // Convert raw data to RGB 888 format
 DWORD convert_RGB888(RGBC rgbc) {
 	WORD red = ((float)rgbc.R / (float)rgbc.C) * (float)255;
@@ -245,90 +246,9 @@ DWORD convert_RGB888(RGBC rgbc) {
 	if (green > 255) { green = 255; }
 	if (blue > 255) { blue = 255; }
 
-	//red = red / (red + green + blue);
-	//blue = blue / (red + green + blue);
-	//green = green / (red + green + blue);
-
 	return ((red << 16) | (green << 8) | blue);
 }
 
-// https://shop.m5stack.com/products/color-unit
-coordinate convert_RGB8882(RGBC rgbc) {
-	float x = 2.7688*((float)(rgbc.R)) + 1.7517*((float)(rgbc.G)) + 1.1301*((float)(rgbc.B));
-	float y = 1.0000*((float)(rgbc.R)) + 4.5906*((float)(rgbc.G)) + 0.0601*((float)(rgbc.B));
-	float z = 0*((float)(rgbc.R)) + 0.0565*((float)(rgbc.G)) + 5.5942*((float)(rgbc.B));
-
-	float x_axis = (float)(x / (x + y + z));
-	float y_axis = (float)(y / (x + y + z));
-
-	coordinate output;
-	output.x = x;
-	output.y = y;
-	output.z = z;
-	output.x_axis = (x_axis * 100);
-	output.y_axis = (y_axis * 100);
-
-	return output;
-}
-
-Eflavour check_colour(DWORD rgb_data) {
-	BYTE red = rgb_data >> 16;
-	BYTE green = (rgb_data >> 8) & 0xFF;
-	BYTE blue = rgb_data & 0xFF;
-
-	if 	(((red >= 61) && (red <= 76)) &&
-			((green >= 112) && (green <= 131)) &&
-			((blue >= 38) && (blue <= 52))) {
-			return GREEN_APPLE;
-	} else if (((red >= 106) && (red <= 115)) &&
-			((green >= 90) && (green <= 97)) &&
-			((blue >= 29) && (blue <= 39))) {
-			return LEMON;
-	} else if (((red >= 135) && (red <= 156)) &&
-			((green >= 54) && (green <= 61)) &&
-			((blue >= 31) && (blue <= 43))) {
-			return ORANGE;
-	} else if (((red >= 114) && (red <= 145)) &&
-			((green >= 36) && (green <= 68)) &&
-			((blue >= 49) && (blue <= 65))) {
-			return STRAWBERRY;
-	} else if (((red >= 80) && (red <= 107)) &&
-			((green >= 76) && (green <= 87)) &&
-			((blue >= 62) && (blue <= 75))) {
-			return GRAPE;
-	}
-	return UNKNOWN;
-}
-
-// Using convert_RGB888
-Eflavour check_colour_side(DWORD rgb_data) {
-	BYTE red = rgb_data >> 16;
-	BYTE green = (rgb_data >> 8) & 0xFF;
-	BYTE blue = rgb_data & 0xFF;
-
-	if 	(((red >= 72) && (red <= 82)) &&
-			((green >= 112) && (green <= 120)) &&
-			((blue >= 39) && (blue <= 45))) {
-			return GREEN_APPLE;
-	} else if (((red >= 99) && (red <= 119)) &&
-			((green >= 89) && (green <= 95)) &&
-			((blue >= 29) && (blue <= 34))) {
-			return LEMON;
-	} else if (((red >= 131) && (red <= 159)) &&
-			((green >= 48) && (green <= 60)) &&
-			((blue >= 31) && (blue <= 37))) {
-			return ORANGE;
-	} else if (((red >= 128) && (red <= 153)) &&
-			((green >= 54) && (green <= 64)) &&
-			((blue >= 43) && (blue <= 53))) {
-			return STRAWBERRY;
-	} else if (((red >= 95) && (red <= 108)) &&
-			((green >= 76) && (green <= 87)) &&
-			((blue >= 59) && (blue <= 66))) {
-			return GRAPE;
-	}
-	return UNKNOWN;
-}
 
 DWORD convert_RGB8881(RGBC rgbc) {
   float i=1;
@@ -351,34 +271,87 @@ DWORD convert_RGB8881(RGBC rgbc) {
   //Amplify data differences
   /*Please don't try to make the data negative,
       unless you don't change the data type*/
-  if(rgbc.R > 30)
-      rgbc.R = rgbc.R - 30;
-  if(rgbc.G > 30)
-      rgbc.G = rgbc.G - 30;
-  if(rgbc.B > 30)
-      rgbc.B = rgbc.B - 30;
+  if(rgbc.R > 30) { rgbc.R = rgbc.R - 30; }
+  if(rgbc.G > 30) { rgbc.G = rgbc.G - 30; }
+  if(rgbc.B > 30) { rgbc.B = rgbc.B - 30; }
+
   rgbc.R = rgbc.R * 255 / 225;
   rgbc.G = rgbc.G * 255 / 225;
   rgbc.B = rgbc.B * 255 / 225;
 
-  if(rgbc.R>255)
-         rgbc.R = 255;
-  if(rgbc.G>255)
-         rgbc.G = 255;
-  if(rgbc.B>255)
-         rgbc.B = 255;
+  if(rgbc.R>255) { rgbc.R = 255; }
+  if(rgbc.G>255) { rgbc.G = 255; }
+  if(rgbc.B>255) { rgbc.B = 255; }
+
   return (rgbc.R << 16) | (rgbc.G << 8) | (rgbc.B);
+}
+
+// https://shop.m5stack.com/products/color-unit
+coordinate convert_RGB8882(RGBC rgbc) {
+	float x = 2.7688*((float)(rgbc.R)) + 1.7517*((float)(rgbc.G)) + 1.1301*((float)(rgbc.B));
+	float y = 1.0000*((float)(rgbc.R)) + 4.5906*((float)(rgbc.G)) + 0.0601*((float)(rgbc.B));
+	float z = 0*((float)(rgbc.R)) + 0.0565*((float)(rgbc.G)) + 5.5942*((float)(rgbc.B));
+
+	float x_axis = (float)(x / (x + y + z));
+	float y_axis = (float)(y / (x + y + z));
+
+	coordinate output;
+	output.x = x;
+	output.y = y;
+	output.z = z;
+	output.x_axis = (x_axis * 100);
+	output.y_axis = (y_axis * 100);
+
+	return output;
 }
 
 DWORD read_sensor(I2C_HandleTypeDef hi2c1, ByteStruct atime, int read_delay, int order_delay) {
 	RGBC raw_color;
 	RGBC ave_color;
 	RGBC sum_color;
+
 	sum_color.R = 0;
 	sum_color.G = 0;
 	sum_color.B = 0;
 	sum_color.C = 0;
-	//BYTE red, blue, green;
+
+	DWORD color;
+
+	// Turn LED on
+	HAL_GPIO_WritePin(LED_EN_PORT, LED_EN_PIN, GPIO_PIN_SET);
+	HAL_Delay(order_delay);
+	for (int i = 0; i < MAX_SENSOR_READS; i++) {
+		raw_color = read_RGBC(hi2c1, atime.val);
+		sum_color.R = raw_color.R + sum_color.R;
+		sum_color.G = raw_color.G + sum_color.G;
+		sum_color.B = raw_color.B + sum_color.B;
+		sum_color.C = raw_color.C + sum_color.C;
+		HAL_Delay(read_delay);
+	}
+
+	// Turn LED off
+	HAL_GPIO_WritePin(LED_EN_PORT, LED_EN_PIN, GPIO_PIN_RESET);
+
+	ave_color.R = (float)sum_color.R / (float)MAX_SENSOR_READS;
+	ave_color.G = (float)sum_color.G / (float)MAX_SENSOR_READS;
+	ave_color.B = (float)sum_color.B / (float)MAX_SENSOR_READS;
+	ave_color.C = (float)sum_color.C / (float)MAX_SENSOR_READS;
+
+	color = convert_RGB888(ave_color);
+
+	return color;
+}
+
+DWORD read_sensor1(I2C_HandleTypeDef hi2c1, ByteStruct atime, int read_delay, int order_delay) {
+	RGBC raw_color;
+	RGBC ave_color;
+	RGBC sum_color;
+
+	sum_color.R = 0;
+	sum_color.G = 0;
+	sum_color.B = 0;
+	sum_color.C = 0;
+
 	DWORD color;
 
 	// Turn LED on
@@ -402,10 +375,78 @@ DWORD read_sensor(I2C_HandleTypeDef hi2c1, ByteStruct atime, int read_delay, int
 	ave_color.B = (float)sum_color.B / (float)MAX_SENSOR_READS;
 	ave_color.C = (float)sum_color.C / (float)MAX_SENSOR_READS;
 
-	color = convert_RGB888(ave_color);
-	//red = color >> 16;
-	//green = (color >> 8) & 0xFF;
-	//blue = color & 0xFF;
+	color = convert_RGB8881(ave_color);
 
 	return color;
 }
+
+// Check if BYTE colour is within low and high value
+BYTE range (BYTE colour, BYTE low, BYTE high) {
+	if ((colour >= low) && (colour <= high)) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+// Check if RGB input matches the colour matrix
+BYTE matrix_check (BYTE matrix[][2], BYTE red, BYTE green, BYTE blue) {
+	if ((range(red, matrix[0][0], matrix[0][1])) &&
+			(range(green, matrix[1][0], matrix[1][1])) &&
+			(range(blue, matrix[2][0], matrix[2][1]))) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+// Translate RGB sensor values to a colour
+Eflavour check_colour_side(DWORD rgb_data) {
+	BYTE red = rgb_data >> 16;
+	BYTE green = (rgb_data >> 8) & 0xFF;
+	BYTE blue = rgb_data & 0xFF;
+
+	// Green Apple RGB Matrix
+	BYTE green_apple_matrix[3][2] = {
+			{71, 82},
+			{112, 122},
+			{33, 45}
+	};
+
+	// Lemon RGB Matrix
+	BYTE lemon_matrix[3][2] = {
+			{99, 119},
+			{86, 99},
+			{28, 34}
+	};
+
+	// Orange RGB Matrix
+	BYTE orange_matrix[3][2] = {
+			{131, 159},
+			{48, 60},
+			{29, 37}
+	};
+
+	// Strawberry RGB Matrix
+	BYTE strawberry_matrix[3][2] = {
+			{128, 156},
+			{49, 64},
+			{43, 53}
+	};
+
+	// Grape RGB Matrix
+	BYTE grape_matrix[3][2] = {
+			{95, 111},
+			{73, 87},
+			{56, 66}
+	};
+
+	if (matrix_check (green_apple_matrix, red, green, blue)) { return GREEN_APPLE; }
+	else if (matrix_check (lemon_matrix, red, green, blue)) { return LEMON; }
+	else if (matrix_check (orange_matrix, red, green, blue)) { return ORANGE;	}
+	else if (matrix_check (strawberry_matrix, red, green, blue)) { return STRAWBERRY;	}
+	else if (matrix_check (grape_matrix, red, green, blue)) { return GRAPE;	}
+	else { return UNKNOWN; }
+}
+
+

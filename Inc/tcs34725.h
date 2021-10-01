@@ -9,8 +9,7 @@
 #define LED_EN_PIN 	GPIO_PIN_13
 
 #define MAX_RD_BYTES 5
-
-#define MAX_SENSOR_READS 5
+#define MAX_SENSOR_READS 3
 
 // TCS34725 Address
 extern const uint8_t TCS_ADDR;
@@ -95,7 +94,6 @@ RetVal read_ctrl_reg(I2C_HandleTypeDef handle);
 
 //RGBC read_RGB(I2C_HandleTypeDef handle);
 
-
 ByteStruct rd_I2C_byte(I2C_HandleTypeDef handle);
 WordStruct rd_I2C_word(I2C_HandleTypeDef handle);
 HAL_StatusTypeDef wr_I2C_byte(I2C_HandleTypeDef handle, BYTE reg_addr);
@@ -118,14 +116,14 @@ void set_atime(I2C_HandleTypeDef handle, BYTE time);
 
 WORD read_channel(I2C_HandleTypeDef handle, EColour colour);
 RGBC read_RGBC(I2C_HandleTypeDef handle, EIntegrationTime atime);
-WORD map(WORD x, WORD in_min, WORD in_max, WORD out_min, WORD out_max);
 DWORD convert_RGB888(RGBC rgbc);
-Eflavour check_colour(DWORD rgb);
 Eflavour check_colour_side(DWORD rgb_data);
 DWORD convert_RGB8881(RGBC rgbc);
 coordinate convert_RGB8882(RGBC rgbc);
-
+BYTE range (BYTE colour, BYTE low, BYTE high);
+BYTE matrix_check (BYTE matrix[][2], BYTE red, BYTE blue, BYTE green);
 DWORD read_sensor(I2C_HandleTypeDef hi2c1, ByteStruct atime, int read_delay, int order_delay);
+DWORD read_sensor1(I2C_HandleTypeDef hi2c1, ByteStruct atime, int read_delay, int order_delay);
 
 /*
 RetVal readClearLowByte(I2C_HandleTypeDef handle);

@@ -96,9 +96,9 @@ int rotate_distributor(Eflavour flavour, int curr_degrees, int delay) {
 	}
 
 	if (degrees.dir == CLOCKWISE) {
-		HAL_GPIO_WritePin(DIRECTION_PORT, DIRECTION_PIN, GPIO_PIN_SET);
-	} else if (degrees.dir == COUNTER_CLOCKWISE) {
 		HAL_GPIO_WritePin(DIRECTION_PORT, DIRECTION_PIN, GPIO_PIN_RESET);
+	} else if (degrees.dir == COUNTER_CLOCKWISE) {
+		HAL_GPIO_WritePin(DIRECTION_PORT, DIRECTION_PIN, GPIO_PIN_SET);
 	}
 
 	rotate_step_deg(degrees.abs_deg, 1, DISTRIBUTOR_PORT, DISTRIBUTOR_PIN);

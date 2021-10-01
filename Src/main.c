@@ -54,9 +54,6 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 uint8_t id;
 RetVal ret;
-//WordStruct red;
-//WordStruct green;
-//WordStruct blue;
 RGBC raw_color;
 DWORD color;
 ByteStruct atime;
@@ -88,6 +85,9 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
+	// PB14 - Interrupt input pin (To enable/disable TCS34725 LED)
+	//
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -118,7 +118,6 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
 
   // Power On Sensor (Set PON bit)
   if (power_on(hi2c1) != HAL_OK) {
@@ -179,16 +178,12 @@ int main(void)
   BYTE red, blue, green;
 
   // Initiate variables
-	int num_chks = 5;
   int num_empty = 0;
   int max_retries = 7;
   int curr_degrees = 90;
-  StepperMove degrees;
-  degrees.abs_deg = 0;
-  degrees.dir = COUNTER_CLOCKWISE;
 
-  int order_delay = 100;
-  int read_delay = 25;
+  int order_delay = 25;
+  int read_delay = 10;
   while (1)
   {
     /* USER CODE END WHILE */
@@ -210,6 +205,7 @@ int main(void)
 			}
 
 			// Print out
+			/*
 			transmit_uart("R: ");
 			int2uart(red);
 			transmit_uart(" | G: ");
@@ -217,33 +213,32 @@ int main(void)
 			transmit_uart(" | B: ");
 			int2uart(blue);
 			transmit_uart(" >>> ");
-
+			*/
 			switch (flavour) {
 			case UNKNOWN:
-				transmit_uart("Unknown\r\n");
+				transmit_uart(" Empty\r\n");
 				break;
 			case LEMON:
-				transmit_uart("Lemon\r\n");
+				transmit_uart(" Lemon\r\n");
 				break;
 			case GREEN_APPLE:
-				transmit_uart("Green Apple\r\n");
+				transmit_uart(" Green Apple\r\n");
 				break;
 			case STRAWBERRY:
-				transmit_uart("Strawberry\r\n");
+				transmit_uart(" Strawberry\r\n");
 				break;
 			case ORANGE:
-				transmit_uart("Orange\r\n");
+				transmit_uart(" Orange\r\n");
 				break;
 			case GRAPE:
-				transmit_uart("Grape\r\n");
+				transmit_uart(" Grape\r\n");
 				break;
 			default:
-				transmit_uart("Default\r\n");
+				transmit_uart(" Default\r\n");
 				break;
 			}
 
 			// Rotate Distributor
-			//HAL_Delay(50);
 			curr_degrees = rotate_distributor(flavour, curr_degrees, order_delay);
 
 			// Rotate Orderly motor
@@ -254,7 +249,7 @@ int main(void)
 
 			// If no skittles detected 6 times, then no more skittles in hopper. End process.
 			if (num_empty >= max_retries) {
-				transmit_uart("\r\n SKITTLE CHECKING COMPLETE!");
+				transmit_uart("\r\n NO MORE SKITTLES DETECTED. END.");
 				return 0;
 			}
   	}
