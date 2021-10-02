@@ -1,5 +1,24 @@
-# color_sorter
+# Skittle Sorter
 
+As its name implies, the Skittle Sorter is a device that sorts your mouth-watering-sugar-intensing-cavity-inducing candies based on their colour/flavour profile (Green Apple, Strawberry, Grape, Lemon, and Orange). 
+
+<p align="center">
+  <img src="demo/PXL_20210930_054328688.jpg" alt="skittle_sorter" width="40%" height="40%"/><br>
+  <i>The Skittle Sorter</i>
+</p>
+
+# How it works
+The foundation of this project is a STM32-F410RB Nucleo board that communicates with a TCS3472 colour sensor and controls the angle of three NEMA 17 stepper motors. Connected to each stepper motor is a A4988 stepper-motor driver. The three motors can be separated by their function:
+1. Revolver: Retrieves a single skittle from the masses within the hopper 
+2. Orderly: Presents the skittle to the colour sensor in an orderly fashion
+3. Disributor: Distributes the skittle to its correct container
+
+<p align="center">
+  <img src="demo/orderly.gif" alt="closeup" width="30%" height="30%"/><br>
+  <i>Separation process at 80% speed.</i>
+</p>
+
+# Colour Sensor
 TCS3472
 - 3x4 photodiode array and four ADC
 - I2C interface, 400kHz
@@ -30,5 +49,3 @@ RGBC Operation:
 - RGBC gain control (AGAIN) affects the magnitude of the reading. Options: 1x, 4x, 16x, 50x
 
 
-Inline-style: 
-![Orderly Demo](demo/orderly.gif)
