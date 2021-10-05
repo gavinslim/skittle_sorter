@@ -3,8 +3,9 @@
 As its name implies, the Skittle Sorter is a device that sorts your mouth-watering-sugar-intensing-cavity-inducing candies based on their colour/flavour profile (Green Apple, Strawberry, Grape, Lemon, and Orange). 
 
 <p align="center">
-  <img src="demo/PXL_20210930_054328688.jpg" alt="skittle_sorter" width="40%" height="40%"/><br>
-  <i>The Skittle Sorter</i>
+  <img src="demo/PXL_20210930_054328688.jpg" alt="skittle_sorter" width="40%" height="40%" />  
+  <img src="demo/normal_speed.gif" alt="closeup" width="37.5%" height="37.5%"/><br>
+  <i> Skittle sorting at normal speed. </i>
 </p>
 
 # How it works
@@ -17,6 +18,12 @@ The foundation of this project is a STM32-F410RB Nucleo board that communicates 
   <img src="demo/orderly.gif" alt="closeup" width="30%" height="30%"/><br>
   <i>Separation process at 80% speed.</i>
 </p>
+
+# Physical Design
+<p align="center">
+  <img src="demo/solidwork/assembly.PNG" width="50%" height="50%"/><br>
+</p>
+
 
 # Colour Sensor
 TCS3472
