@@ -24,6 +24,16 @@ The foundation of this project is a STM32-F410RB Nucleo board that communicates 
   <img src="demo/solidwork/assembly.PNG" width="50%" height="50%"/><br>
 </p>
 
+# Challenges
+Initial design did not consider the impact of the letter 'S' printed on each skittle. As a result of the 'S' being printed on one side, there was a 50/50 chance of the sensor was either reading the printed side or the non-printed side. Because the 'S' letter was printed in a white font, the raw sensor readings would be different compared to reading the non-printed side. 
+
+The solution: [placeholder]
+
+
+# Future Additions
+1. Save colour frequency to external microSD card
+2. Transfer sorting data to the cloud for post-processing
+3. Provide live data visualization on server
 
 # Colour Sensor
 TCS3472
