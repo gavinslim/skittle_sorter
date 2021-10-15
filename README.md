@@ -1,5 +1,4 @@
 # Skittle Sorter
-=======
 
 As its name implies, the Skittle Sorter is a device that sorts your mouth-watering-sugar-intensing-cavity-inducing candies based on their colour/flavour profile (Green Apple, Strawberry, Grape, Lemon, and Orange). 
 
