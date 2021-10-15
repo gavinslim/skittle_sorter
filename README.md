@@ -27,7 +27,7 @@ The foundation of this project is a STM32-F410RB Nucleo board that communicates 
 # Challenges
 Initial design did not consider the impact of the letter 'S' printed on each skittle. As a result of the 'S' being printed on one side, there was a 50/50 chance of the sensor was either reading the printed side or the non-printed side. Because the 'S' letter was printed in a white font, the raw sensor readings would be different compared to reading the non-printed side. 
 
-The solution: [placeholder]
+The solution: Adjust the design of the Orderly such that the side of the skittle faces the colour sensor, thereby avoiding the 'S'. 
 
 
 # Future Additions
