@@ -86,7 +86,6 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
 	// PB14 - Interrupt input pin (To enable/disable TCS34725 LED)
-	//
 
   /* USER CODE END 1 */
 
@@ -175,7 +174,6 @@ int main(void)
   transmit_uart("\r\n");
 
   Eflavour flavour;
-  BYTE red, blue, green;
 
   // Initiate variables
   int num_empty = 0;
@@ -184,6 +182,7 @@ int main(void)
 
   int order_delay = 25;
   int read_delay = 10;
+
   while (1)
   {
     /* USER CODE END WHILE */
@@ -191,13 +190,11 @@ int main(void)
     /* USER CODE BEGIN 3 */
   	if (led_on == 1) {
 
-			// Check colour
+			// Check color
   		color = read_sensor(hi2c1, atime, read_delay, order_delay);
-			red = color >> 16;
-			green = (color >> 8) & 0xFF;
-			blue = color & 0xFF;
-
 			flavour = check_colour_side(color);
+
+			// If flavour is unknown, which indicates
 			if (flavour == UNKNOWN) {
 				num_empty++;
 			} else {
@@ -206,6 +203,10 @@ int main(void)
 
 			// Print out
 			/*
+			BYTE red = color >> 16;
+			BYTE green = (color >> 8) & 0xFF;
+			BYTE blue = color & 0xFF;
+
 			transmit_uart("R: ");
 			int2uart(red);
 			transmit_uart(" | G: ");
@@ -214,6 +215,7 @@ int main(void)
 			int2uart(blue);
 			transmit_uart(" >>> ");
 			*/
+
 			switch (flavour) {
 			case UNKNOWN:
 				transmit_uart(" Empty\r\n");
@@ -557,7 +559,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
    */
 	// Toggle color sensor LED
   HAL_GPIO_TogglePin(LED_EN_PORT, LED_EN_PIN);
-	//transmit_uart("TOGGLED\r\n");
+	transmit_uart("TOGGLED\r\n");
 	led_on = !led_on;
 
 	// Switch bounce
